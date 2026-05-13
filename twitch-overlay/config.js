@@ -4,7 +4,7 @@
 
 window.OVERLAY_CONFIG = {
   // Twitch channel to connect to (e.g. "xqc", "pokimane")
-  channel: "wahabnotty",
+  channel: "xqc",
 
   // Maximum number of chat messages visible at once
   maxMessages: 10,
