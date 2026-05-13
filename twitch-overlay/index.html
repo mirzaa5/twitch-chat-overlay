@@ -1,0 +1,36 @@
+<!--
+  Twitch Chat Overlay — index.html
+  Entry point loaded by OBS Browser Source or a local dev server.
+  Expects: config.js (loaded first), chat.js, style.css
+
+  OBS SETUP:
+  1. In OBS, click + under Sources
+  2. Choose "Browser"
+  3. Check "Local file" and browse to this index.html
+  4. Set Width: 1920, Height: 1080
+  5. Check "Shutdown source when not visible"
+  6. Check "Refresh browser when scene becomes active"
+  7. Click OK
+
+  To position the chat: right-click the source > Transform > Edit Transform
+  Or drag the source edges in the preview canvas.
+
+  CUSTOMIZATION: Edit config.js to change channel, colors, font, and behavior.
+  No reload needed in OBS — use "Interact" > right-click > Refresh to apply changes.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0" />
+  <title>Twitch Chat Overlay</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="chat-container"></div>
+
+  <!-- config.js must load before chat.js -->
+  <script src="config.js"></script>
+  <script src="chat.js"></script>
+</body>
+</html>

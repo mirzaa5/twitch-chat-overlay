@@ -1,0 +1,326 @@
+Building a Twitch Chat Overlay — Cursor IDE Guide (Claude Sonnet 4.6)
+
+Paste each prompt block into Cursor's AI chat (set model to claude-sonnet-4-6).
+Follow the steps in order. Each prompt builds on the last.
+
+
+Prerequisites
+Before you start, make sure you have:
+
+Cursor IDE installed
+Model set to claude-sonnet-4-6 in Cursor settings
+A folder created for your project, e.g. twitch-overlay/
+OBS Studio installed (for final testing)
+
+
+Step 1 — Project Scaffold
+What you're doing: Creating the folder structure and base files.
+Open Cursor, open your twitch-overlay/ folder, then paste this into Cursor Chat:
+Create a Twitch chat overlay project with the following file structure:
+
+twitch-overlay/
+  index.html
+  style.css
+  chat.js
+  config.js
+
+Rules:
+- index.html links to style.css and chat.js
+- config.js is loaded before chat.js in the HTML
+- The body background must be fully transparent (for OBS overlay use)
+- Set the viewport meta tag for 1920x1080
+- Add a single div with id="chat-container" inside the body
+- Do not add any visible content yet — just the scaffold
+Expected output: 4 empty/minimal files with correct linking order.
+
+Step 2 — Config File
+What you're doing: Setting up a central config so the overlay is easy to customize without touching the core logic.
+Populate config.js with a configuration object called OVERLAY_CONFIG.
+
+It must include these properties:
+- channel: "" (string, the Twitch channel name to connect to)
+- maxMessages: 20 (number, max chat messages visible at once)
+- fontSize: "16px"
+- fontFamily: "'Segoe UI', sans-serif"
+- messageColor: "#ffffff"
+- usernameColor: "#a970ff" (Twitch purple as default)
+- backgroundColor: "rgba(0, 0, 0, 0.5)"
+- badgeSize: "18px"
+- animationDuration: "0.3s"
+- showBadges: true
+- showTimestamps: false
+- highlightMentions: true
+- mentionColor: "#ffb31a"
+
+Export nothing — just assign to window.OVERLAY_CONFIG so it's globally accessible.
+Add a comment at the top: "// Edit this file to customize your overlay"
+
+Step 3 — Base CSS
+What you're doing: Building the visual style of the overlay.
+Populate style.css for a Twitch chat overlay. Requirements:
+
+1. The html and body must have:
+   - margin: 0, padding: 0
+   - background: transparent
+   - overflow: hidden
+   - width: 100vw, height: 100vh
+
+2. #chat-container:
+   - position: fixed at bottom-left
+   - width: 340px
+   - max-height: 70vh
+   - padding: 10px
+   - display flex, flex-direction column, justify-content flex-end
+   - gap: 6px between messages
+   - overflow: hidden
+
+3. .chat-message class:
+   - background: var background using OVERLAY_CONFIG.backgroundColor
+   - border-radius: 8px
+   - padding: 6px 10px
+   - font-size from config
+   - color from config
+   - word-break: break-word
+   - animation: slideIn 0.3s ease-out forwards
+   - display: flex, align-items: flex-start, gap: 6px
+
+4. .username class:
+   - font-weight: bold
+   - color from config
+   - margin-right: 4px
+   - white-space: nowrap
+
+5. .message-text class:
+   - flex: 1
+   - line-height: 1.4
+
+6. .badge img:
+   - width: 18px, height: 18px
+   - vertical-align: middle
+   - margin-right: 2px
+
+7. .badges class:
+   - display: inline-flex
+   - align-items: center
+   - gap: 2px
+   - margin-right: 4px
+
+8. @keyframes slideIn:
+   - from: opacity 0, transform translateX(-20px)
+   - to: opacity 1, transform translateX(0)
+
+9. @keyframes fadeOut:
+   - from: opacity 1
+   - to: opacity 0
+
+10. .removing class:
+    - animation: fadeOut 0.3s ease-out forwards
+
+Use CSS custom properties at the :root level where config values are needed.
+Add a @media query for prefers-reduced-motion that disables all animations.
+
+Step 4 — Twitch WebSocket Connection
+What you're doing: This is the core — connecting to Twitch IRC over WebSocket to receive live chat.
+Populate chat.js with a Twitch IRC WebSocket client. Here are the exact requirements:
+
+=== CONNECTION ===
+- Connect to: wss://irc-ws.chat.twitch.tv:443
+- Use anonymous login: NICK justinfan<random 5 digit number>
+- Send CAP REQ for twitch.tv/tags and twitch.tv/commands to get metadata
+- JOIN the channel from OVERLAY_CONFIG.channel (prefixed with #)
+- Reconnect automatically if the socket closes, with a 3 second delay
+
+=== IRC MESSAGE PARSING ===
+Parse raw Twitch IRC strings in this format:
+  @tag1=val1;tag2=val2 :user!user@user.tmi.twitch.tv PRIVMSG #channel :message text
+
+Extract:
+- tags object (split by ; then =)
+- username from the prefix section
+- command (PRIVMSG, PING, etc.)
+- channel
+- message text (everything after the final colon)
+
+Handle PING by sending PONG back immediately.
+
+=== TAG EXTRACTION ===
+From the tags object, extract:
+- display-name (use as username display)
+- color (user's chat color, fallback to OVERLAY_CONFIG.usernameColor)
+- badges (format: "broadcaster/1,subscriber/3" — parse into array of {name, version})
+- emotes (format: "emoteid:start-end,start-end/emoteid2:start-end")
+
+=== BADGE RENDERING ===
+For each badge in the badges tag, render an <img> using this URL pattern:
+  https://static-cdn.jtvnw.net/badges/v1/{badge-set-id}/{badge-version}/1
+
+Common badge-set-ids to support: broadcaster, moderator, subscriber, vip, staff
+
+=== EMOTE RENDERING ===
+For each emote in the emotes tag, replace the text at those character positions with:
+  <img src="https://static-cdn.jtvnw.net/emoticons/v2/{emote-id}/default/dark/1.0" 
+       style="width:24px;height:24px;vertical-align:middle;" alt="{emote-name}">
+
+Replace from end to start to preserve character positions.
+
+=== DOM RENDERING ===
+- Add new messages to the bottom of #chat-container
+- Each message is a div.chat-message with:
+    - div.badges (if showBadges is true)
+    - span.username (colored with user's color)
+    - span.message-text (with emotes rendered)
+- If total messages exceed OVERLAY_CONFIG.maxMessages, remove the oldest one
+  with a .removing animation before deleting it from the DOM
+- If OVERLAY_CONFIG.highlightMentions is true and message contains @channelname,
+  add class highlight-mention to the message div
+- If OVERLAY_CONFIG.showTimestamps is true, prepend a span.timestamp with HH:MM format
+
+=== INITIALIZATION ===
+- Wait for DOMContentLoaded
+- Validate that OVERLAY_CONFIG.channel is not empty — if it is, show a styled
+  error message inside #chat-container saying "Set your channel in config.js"
+- Then connect
+
+Write clean, well-commented vanilla JS. No libraries, no frameworks, no build tools.
+
+Step 5 — Error State & Loading UI
+What you're doing: Adding user-friendly feedback when things go wrong.
+In chat.js, add the following UI states:
+
+1. CONNECTING state: When the socket first opens but before JOIN is confirmed,
+   show a small div.status-message inside #chat-container with text
+   "Connecting to #channelname..." with a pulsing CSS animation.
+   Remove it as soon as the first PRIVMSG arrives.
+
+2. ERROR state: If the socket fails to connect or errors out, show
+   div.status-message.error with text "Connection failed. Retrying in 3s..."
+
+3. NO CONFIG state: If channel is empty string in config.js, show
+   div.status-message.warning with text "⚠ Open config.js and set your channel name"
+
+In style.css, add styles for .status-message:
+- background: rgba(0,0,0,0.7)
+- border-left: 3px solid #a970ff
+- padding: 8px 12px
+- border-radius: 4px
+- font-size: 13px
+- color: #ccc
+- .error variant: border-color #e74c3c
+- .warning variant: border-color #f39c12
+- A @keyframes pulse animation on opacity for the connecting state
+
+Step 6 — Local Testing
+What you're doing: Opening the overlay in your browser and verifying it works before putting it in OBS.
+In config.js, set OVERLAY_CONFIG.channel to a popular Twitch channel
+(for example "xqc" or "pokimane") so there is active chat to test with.
+
+Then explain exactly how to:
+1. Open index.html directly in Chrome (file:// protocol)
+2. Open Chrome DevTools Console to see connection logs
+3. What a successful connection looks like in the console
+4. What a failed connection looks like and how to debug it
+5. How to confirm messages are rendering correctly
+
+Also add console.log statements to chat.js at these points:
+- When WebSocket opens: "[Twitch Overlay] Connected"
+- When JOIN is sent: "[Twitch Overlay] Joining #channelname"
+- When first message arrives: "[Twitch Overlay] Receiving messages ✓"
+- When reconnecting: "[Twitch Overlay] Reconnecting in 3s..."
+- On any parse error: "[Twitch Overlay] Parse error: " + the raw line
+
+Step 7 — OBS Integration
+What you're doing: Loading the overlay as a Browser Source in OBS.
+Add a comment block at the top of index.html with OBS setup instructions:
+
+<!--
+  OBS SETUP:
+  1. In OBS, click + under Sources
+  2. Choose "Browser"
+  3. Check "Local file" and browse to this index.html
+  4. Set Width: 1920, Height: 1080
+  5. Check "Shutdown source when not visible"
+  6. Check "Refresh browser when scene becomes active"
+  7. Click OK
+
+  To position the chat: right-click the source > Transform > Edit Transform
+  Or drag the source edges in the preview canvas.
+
+  CUSTOMIZATION: Edit config.js to change channel, colors, font, and behavior.
+  No reload needed in OBS — use "Interact" > right-click > Refresh to apply changes.
+-->
+
+Also create a file called README.md with the same instructions written in plain
+Markdown, plus a troubleshooting section covering:
+- Chat not showing (wrong channel name)
+- Blank screen in OBS (check Local file path)
+- Emotes not loading (CORS issue when opened from file://)
+- Reconnection loops (network issues)
+
+Step 8 — Polish & Packaging
+What you're doing: Making the overlay clean, customizable, and ready to sell or share.
+Do the following polish pass across all files:
+
+1. In style.css, add a .highlight-mention class:
+   - background: rgba(255, 179, 26, 0.15)
+   - border-left: 2px solid #ffb31a
+   - padding-left: 8px
+
+2. In chat.js, make username colors accessible: if the incoming color from Twitch
+   tags is too dark to read on a dark background (luminance below 0.3), brighten it
+   by mixing it toward white by 40%. Write a helper function getLegibleColor(hex).
+
+3. Add a smooth scroll-to-bottom that only triggers when the user is already
+   scrolled near the bottom — don't force-scroll if someone has manually scrolled up.
+
+4. In config.js, add these new options with comments explaining each:
+   - fadeMessageAfter: 0 (seconds, 0 = never fade)
+   - textShadow: true (adds subtle shadow for legibility on bright backgrounds)
+   - maxWidth: "340px"
+   - position: "bottom-left" (accepts bottom-left, bottom-right, top-left, top-right)
+
+5. In style.css, implement the 4 position variants using CSS classes added to
+   #chat-container based on OVERLAY_CONFIG.position.
+
+6. Add a comment at the top of each file noting:
+   - What the file does
+   - What variables/functions it exports or expects
+
+Step 9 — Final Verification Checklist
+Ask Cursor to do a final review:
+Review all files in this project and verify:
+
+1. All files are linked correctly in index.html in the right order
+   (config.js before chat.js)
+2. There are no hardcoded channel names — everything reads from OVERLAY_CONFIG
+3. The background is transparent everywhere (no solid body background)
+4. The WebSocket reconnects automatically on close or error
+5. PING/PONG is handled so Twitch doesn't disconnect us
+6. Old messages are cleaned up when maxMessages is exceeded
+7. The overlay works when opened as a local file:// in Chrome
+8. No external libraries are loaded (pure vanilla JS)
+9. All config options in config.js are actually used somewhere in chat.js or style.css
+10. README.md exists with OBS setup instructions
+
+Fix any issues found. Then print a summary of the final file structure
+and what each file does.
+
+Final File Structure
+After completing all steps, your project should look like this:
+twitch-overlay/
+├── index.html       ← Entry point, loaded by OBS Browser Source
+├── config.js        ← Edit this to customize the overlay
+├── chat.js          ← WebSocket connection + DOM rendering logic
+├── style.css        ← All visual styles
+└── README.md        ← OBS setup + troubleshooting guide
+
+Quick Reference — Twitch IRC Cheat Sheet
+Twitch sendsWhat it meansPING :tmi.twitch.tvKeepalive — you must reply PONG :tmi.twitch.tv@tags :user PRIVMSG #ch :msgA chat message@tags :user JOIN #chSomeone joinedRECONNECTTwitch wants you to reconnect@login-failed in tagsInvalid credentials
+Anonymous login format:
+PASS SCHMOOPIIE
+NICK justinfan83712
+CAP REQ :twitch.tv/tags twitch.tv/commands
+JOIN #channelname
+Emote URL:
+https://static-cdn.jtvnw.net/emoticons/v2/{id}/default/dark/1.0
+Badge URL:
+https://static-cdn.jtvnw.net/badges/v1/{badge-id}/{version}/1
