@@ -82,6 +82,21 @@
     // Close button — revert any live preview changes
     panel.querySelector('#sp-close').addEventListener('click', closeAndRevert);
 
+    // Alert test buttons
+    const TEST_ALERTS = {
+      sub:     { icon: '⭐', cls: 'alert-sub',  text: 'TestViewer just subscribed with Tier 1!',              sub: '' },
+      resub:   { icon: '⭐', cls: 'alert-sub',  text: "LongTimeFan subscribed for 12 months! (Tier 1)",       sub: 'love this stream keep it up!' },
+      gift:    { icon: '🎁', cls: 'alert-gift', text: 'GenerousGuy gifted a Tier 1 sub to LuckyViewer!',      sub: '' },
+      mystery: { icon: '🎁', cls: 'alert-gift', text: 'BigSpender is gifting 5 Tier 1 subs to the community!', sub: '' },
+      raid:    { icon: '🚀', cls: 'alert-raid', text: '420 raiders from FriendlyStreamer have joined!',        sub: '' },
+    };
+    panel.querySelectorAll('.sp-alert-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const a = TEST_ALERTS[btn.dataset.alert];
+        if (a && window.overlayAPI) window.overlayAPI.addAlert(a.icon, a.cls, a.text, a.sub);
+      });
+    });
+
     // Apply button — validate first, then commit or show error
     panel.querySelector('#sp-apply').addEventListener('click', () => {
       const btn = panel.querySelector('#sp-apply');
@@ -172,6 +187,7 @@
     cfg.showTimestamps      = get('sp-showTimestamps').checked;
     cfg.highlightMentions   = get('sp-highlightMentions').checked;
     cfg.textShadow          = get('sp-textShadow').checked;
+    cfg.showAlerts          = get('sp-showAlerts').checked;
 
     // Apply CSS vars live
     if (window.overlayAPI) window.overlayAPI.applyConfigToCSS();
@@ -225,6 +241,7 @@
     set('sp-showTimestamps',   cfg.showTimestamps);
     set('sp-highlightMentions',cfg.highlightMentions);
     set('sp-textShadow',       cfg.textShadow);
+    set('sp-showAlerts',       cfg.showAlerts);
 
     const opacityVal = panel.querySelector('#sp-bg-opacity-val');
     if (opacityVal) opacityVal.textContent = bg.alpha + '%';
@@ -292,6 +309,7 @@
       showTimestamps: cfg.showTimestamps, highlightMentions: cfg.highlightMentions,
       mentionColor: cfg.mentionColor, fadeMessageAfter: cfg.fadeMessageAfter,
       textShadow: cfg.textShadow, maxWidth: cfg.maxWidth, position: cfg.position,
+      showAlerts: cfg.showAlerts,
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)); } catch (e) {}
   }
@@ -437,6 +455,21 @@
               <span class="sp-unit">s</span>
             </div>
             <span class="sp-hint">0.1 – 1.0 s</span>
+          </div>
+        </div>
+
+        <div class="sp-section">
+          <div class="sp-section-label">Alerts</div>
+          ${toggle('sp-showAlerts', 'Show sub / raid alerts', cfg.showAlerts !== false)}
+          <div class="sp-field" style="margin-top:6px">
+            <span class="sp-label" style="margin-bottom:6px;display:block">Preview alerts</span>
+            <div class="sp-alert-btns">
+              <button class="sp-alert-btn sp-alert-btn--sub"     data-alert="sub">⭐ Sub</button>
+              <button class="sp-alert-btn sp-alert-btn--sub"     data-alert="resub">⭐ Resub</button>
+              <button class="sp-alert-btn sp-alert-btn--gift"    data-alert="gift">🎁 Gift</button>
+              <button class="sp-alert-btn sp-alert-btn--gift"    data-alert="mystery">🎁 Mystery</button>
+              <button class="sp-alert-btn sp-alert-btn--raid"    data-alert="raid">🚀 Raid</button>
+            </div>
           </div>
         </div>
 

@@ -577,6 +577,32 @@ html, body {
 .sp-toggle-input:checked + .sp-toggle-track .sp-toggle-thumb { transform: translateX(14px); }
 .sp-toggle-label { font-size: 12.5px; font-weight: 500; color: #2a2a44; }
 
+/* ─── Alert Test Buttons ─────────────────────────────────────────────────────── */
+.sp-alert-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sp-alert-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;
+  border: 1.5px solid transparent;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+  padding: 0 8px;
+}
+.sp-alert-btn:hover  { opacity: 0.82; }
+.sp-alert-btn:active { transform: scale(0.96); }
+.sp-alert-btn--sub  { background: rgba(145,71,255,0.12); border-color: rgba(145,71,255,0.4); color: #7c3aed; }
+.sp-alert-btn--gift { background: rgba(0,212,255,0.1);   border-color: rgba(0,212,255,0.4);  color: #0891b2; }
+.sp-alert-btn--raid { background: rgba(255,179,26,0.12); border-color: rgba(255,179,26,0.5); color: #b45309; }
+
 /* ─── Panel Footer ───────────────────────────────────────────────────────────── */
 .sp-footer {
   padding: 11px 15px 13px;

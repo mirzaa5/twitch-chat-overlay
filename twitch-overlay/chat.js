@@ -450,6 +450,7 @@
   };
 
   function handleUserNotice(parsed) {
+    if (!cfg.showAlerts) return;
     const { tags } = parsed;
     const msgId = tags['msg-id'];
     if (!msgId || !ALERT_TYPES[msgId]) return;
@@ -547,7 +548,7 @@
     applyPosition();
 
     // Expose API for settings panel
-    window.overlayAPI = { applyConfigToCSS, connect };
+    window.overlayAPI = { applyConfigToCSS, connect, addAlert };
 
     if (!cfg.channel || cfg.channel.trim() === '') {
       showStatus('⚠ Open config.js and set your channel name', 'warning');

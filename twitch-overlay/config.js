@@ -39,6 +39,9 @@ window.OVERLAY_CONFIG = {
   // Fade message after N seconds (0 = never fade)
   fadeMessageAfter: 0,
 
+  // Show sub / raid / gift alerts in the chat overlay
+  showAlerts: true,
+
   // Adds a subtle text shadow for legibility on bright backgrounds
   textShadow: true,
 
