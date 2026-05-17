@@ -281,7 +281,7 @@ html, body {
   position: fixed;
   z-index: 1000;
   width: 272px;
-  max-height: 70vh;
+  max-height: min(600px, 85vh);
   background: #ffffff;
   border-radius: 14px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
