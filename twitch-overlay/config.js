@@ -6,6 +6,12 @@ window.OVERLAY_CONFIG = {
   // Twitch channel to connect to (e.g. "xqc", "pokimane")
   channel: "xqc",
 
+  // Twitch API credentials — needed for real badge images (subscriber, bits, etc.)
+  // clientId:   Register a free app at https://dev.twitch.tv/console → get Client ID
+  // oauthToken: Get from https://twitchapps.com/tmi/ (copy without the "oauth:" prefix)
+  clientId:   "",
+  oauthToken: "",
+
   // Maximum number of chat messages visible at once
   maxMessages: 10,
 
