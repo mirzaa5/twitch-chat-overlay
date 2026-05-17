@@ -163,6 +163,46 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
+/* ─── USERNOTICE Alert Cards ─────────────────────────────────────────────────── */
+.alert-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.alert-sub  { background: rgba(145, 71, 255, 0.18); border-color: rgba(145, 71, 255, 0.35); }
+.alert-gift { background: rgba(0,  212, 255, 0.12); border-color: rgba(0,  212, 255, 0.3);  }
+.alert-raid { background: rgba(255,179,  26, 0.13); border-color: rgba(255,179,  26, 0.35); }
+
+.alert-icon {
+  font-size: 1em;
+  flex-shrink: 0;
+  line-height: 1.55;
+}
+
+.alert-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.alert-text {
+  font-size: 0.88em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.alert-subtext {
+  font-size: 0.84em;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.5);
+  word-break: break-word;
+}
+
 /* ─── Highlight Mention ──────────────────────────────────────────────────────── */
 .highlight-mention {
   background: rgba(255, 179, 26, 0.12);

@@ -432,6 +432,85 @@
     }, 3000);
   }
 
+  // ─── IRC tag value unescaping ─────────────────────────────────────────────
+  function unescapeTag(str) {
+    return str.replace(/\\s/g, ' ').replace(/\\n/g, '\n').replace(/\\r/g, '\r')
+              .replace(/\\\\/g, '\\').replace(/\\:/g, ';');
+  }
+
+  // ─── USERNOTICE alert renderer ────────────────────────────────────────────
+  const ALERT_TYPES = {
+    sub:            { icon: '⭐', cls: 'alert-sub'  },
+    resub:          { icon: '⭐', cls: 'alert-sub'  },
+    subgift:        { icon: '🎁', cls: 'alert-gift' },
+    anonsubgift:    { icon: '🎁', cls: 'alert-gift' },
+    submysterygift: { icon: '🎁', cls: 'alert-gift' },
+    raid:           { icon: '🚀', cls: 'alert-raid' },
+    ritual:         { icon: '👋', cls: 'alert-sub'  },
+  };
+
+  function handleUserNotice(parsed) {
+    const { tags } = parsed;
+    const msgId = tags['msg-id'];
+    if (!msgId || !ALERT_TYPES[msgId]) return;
+
+    const { icon, cls } = ALERT_TYPES[msgId];
+    const systemMsg = unescapeTag(tags['system-msg'] || '');
+    if (!systemMsg) return;
+
+    // resub may include an optional chat message typed by the user
+    const userMsg = (msgId === 'resub' && parsed.message) ? parsed.message : '';
+
+    addAlert(icon, cls, systemMsg, userMsg);
+
+    if (!firstMessageReceived) {
+      firstMessageReceived = true;
+      removeStatus();
+    }
+  }
+
+  function addAlert(icon, cls, text, subtext) {
+    const el = document.createElement('div');
+    el.className = `chat-message alert-message ${cls}`;
+
+    const iconEl = document.createElement('span');
+    iconEl.className = 'alert-icon';
+    iconEl.textContent = icon;
+
+    const bodyEl = document.createElement('span');
+    bodyEl.className = 'alert-body';
+
+    const textEl = document.createElement('span');
+    textEl.className = 'alert-text';
+    textEl.textContent = text;
+    bodyEl.appendChild(textEl);
+
+    if (subtext) {
+      const sub = document.createElement('span');
+      sub.className = 'alert-subtext';
+      sub.textContent = `"${subtext}"`;
+      bodyEl.appendChild(sub);
+    }
+
+    el.appendChild(iconEl);
+    el.appendChild(bodyEl);
+
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+
+    const allMsgs = container.querySelectorAll('.chat-message:not(.removing)');
+    const excess = allMsgs.length - cfg.maxMessages;
+    for (let i = 0; i < excess; i++) removeOldestMessage();
+
+    if (cfg.fadeMessageAfter > 0) {
+      const dur = parseFloat(cfg.animationDuration) * 1000 || 300;
+      setTimeout(() => {
+        el.classList.add('removing');
+        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, dur);
+      }, cfg.fadeMessageAfter * 1000);
+    }
+  }
+
   // ─── Handle a single IRC line ─────────────────────────────────────────────
   function handleLine(line) {
     // Keepalive
@@ -457,6 +536,8 @@
         console.log('[Twitch Overlay] Receiving messages ✓');
       }
       addMessage(parsed);
+    } else if (parsed.command === 'USERNOTICE') {
+      handleUserNotice(parsed);
     }
   }
 
