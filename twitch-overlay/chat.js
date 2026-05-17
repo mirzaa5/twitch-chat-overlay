@@ -14,20 +14,66 @@
   let statusEl = null;
   let firstMessageReceived = false;
 
+  // Badge image URL cache — populated from Helix API if clientId + oauthToken are set.
+  // Key: "setId/version" (e.g. "subscriber/3"), value: 1x image URL
+  const badgeCache = new Map();
+
+  async function fetchBadges(channel) {
+    const clientId   = (cfg.clientId   || '').trim();
+    const oauthToken = (cfg.oauthToken || '').trim().replace(/^oauth:/, '');
+    if (!clientId || !oauthToken) return;
+
+    const headers = {
+      'Authorization': `Bearer ${oauthToken}`,
+      'Client-Id': clientId,
+    };
+
+    try {
+      // Fetch global badges (mod, vip, broadcaster, etc.)
+      const globalRes = await fetch('https://api.twitch.tv/helix/chat/badges/global', { headers });
+      if (!globalRes.ok) { console.warn('[Twitch Overlay] Badge API error:', globalRes.status); return; }
+      const globalData = await globalRes.json();
+      (globalData.data || []).forEach(set => {
+        set.versions.forEach(v => badgeCache.set(`${set.set_id}/${v.id}`, v.image_url_1x));
+      });
+
+      // Get broadcaster_id for channel-specific badges (subscriber, bits, etc.)
+      const userRes  = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(channel)}`, { headers });
+      const userData = await userRes.json();
+      const broadcasterId = userData.data?.[0]?.id;
+
+      if (broadcasterId) {
+        const chanRes  = await fetch(`https://api.twitch.tv/helix/chat/badges?broadcaster_id=${broadcasterId}`, { headers });
+        const chanData = await chanRes.json();
+        (chanData.data || []).forEach(set => {
+          set.versions.forEach(v => badgeCache.set(`${set.set_id}/${v.id}`, v.image_url_1x));
+        });
+      }
+
+      console.log(`[Twitch Overlay] Loaded ${badgeCache.size} badge variants ✓`);
+    } catch (err) {
+      console.warn('[Twitch Overlay] Badge fetch failed:', err);
+    }
+  }
+
   // ─── Apply CSS custom properties from config ──────────────────────────────
   function applyConfigToCSS() {
     const root = document.documentElement;
-    root.style.setProperty('--bg-color', cfg.backgroundColor);
-    root.style.setProperty('--msg-color', cfg.messageColor);
-    root.style.setProperty('--username-color', cfg.usernameColor);
-    root.style.setProperty('--mention-color', cfg.mentionColor);
-    root.style.setProperty('--font-size', cfg.fontSize);
-    root.style.setProperty('--font-family', cfg.fontFamily);
-    root.style.setProperty('--badge-size', cfg.badgeSize);
+    root.style.setProperty('--bg-color',           cfg.backgroundColor);
+    root.style.setProperty('--glass-bg',           cfg.backgroundColor); // what .chat-message actually reads
+    root.style.setProperty('--msg-color',          cfg.messageColor);
+    root.style.setProperty('--username-color',     cfg.usernameColor);
+    root.style.setProperty('--mention-color',      cfg.mentionColor);
+    root.style.setProperty('--font-size',          cfg.fontSize);
+    root.style.setProperty('--font-family',        cfg.fontFamily);
+    root.style.setProperty('--badge-size',         cfg.badgeSize);
     root.style.setProperty('--animation-duration', cfg.animationDuration);
-    root.style.setProperty('--max-width', cfg.maxWidth);
-    root.style.setProperty('--text-shadow', cfg.textShadow
-      ? '1px 1px 3px rgba(0,0,0,0.8)'
+    root.style.setProperty('--max-width',          cfg.maxWidth);
+    root.style.setProperty('--text-shadow',        cfg.textShadow
+      ? '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.6)'
+      : 'none');
+    root.style.setProperty('--username-shadow',    cfg.textShadow
+      ? '0 0 8px currentColor'
       : 'none');
   }
 
@@ -115,6 +161,17 @@
   }
 
   // ─── Badge rendering ──────────────────────────────────────────────────────
+  // Twitch badge CDN now uses UUID-based set IDs, not name-based paths.
+  // These UUIDs are stable global badge set IDs from the Helix API.
+  const BADGE_UUIDS = {
+    broadcaster: '5527c58c-fb7d-422d-b71b-f309dcb85cc1',
+    moderator:   '3267646d-33f0-4b17-b3df-f923a41db1d0',
+    vip:         'b817aba4-fad8-49e2-b88a-7cc744dfa6ec',
+    staff:       'd97c37be-a222-4a84-91b3-af6488e7e8f0',
+    partner:     'd12a2e27-16f6-41d0-ab77-b780518f00a3',
+    turbo:       'bd444ec6-8f34-4bf9-91f4-af1e3428d80f',
+  };
+
   // badge-set format: "broadcaster/1,subscriber/3"
   function parseBadges(badgeStr) {
     if (!badgeStr) return [];
@@ -128,15 +185,28 @@
     const wrap = document.createElement('span');
     wrap.className = 'badges';
     badges.forEach(({ name, version }) => {
-      const supported = ['broadcaster', 'moderator', 'subscriber', 'vip', 'staff'];
-      if (!supported.includes(name)) return;
       const span = document.createElement('span');
       span.className = 'badge';
-      const img = document.createElement('img');
-      img.src = `https://static-cdn.jtvnw.net/badges/v1/${name}/${version}/1`;
-      img.alt = name;
-      img.onerror = () => { span.style.display = 'none'; };
-      span.appendChild(img);
+
+      // Priority: Helix API cache → hardcoded UUID fallback → CSS dot
+      const cachedUrl = badgeCache.get(`${name}/${version}`);
+      const uuid      = BADGE_UUIDS[name];
+      const imgUrl    = cachedUrl || (uuid ? `https://static-cdn.jtvnw.net/badges/v1/${uuid}/1` : null);
+
+      if (!imgUrl) {
+        span.dataset.badgeType = name;
+        span.classList.add('badge-dot');
+      } else {
+        const img = document.createElement('img');
+        img.src = imgUrl;
+        img.alt = name;
+        img.onerror = () => {
+          img.style.display = 'none';
+          span.dataset.badgeType = name;
+          span.classList.add('badge-dot');
+        };
+        span.appendChild(img);
+      }
       wrap.appendChild(span);
     });
     return wrap;
@@ -227,7 +297,8 @@
 
   // ─── Remove oldest message with fade ─────────────────────────────────────
   function removeOldestMessage() {
-    const msgs = container.querySelectorAll('.chat-message');
+    // Only target visible messages — skip ones already animating out
+    const msgs = container.querySelectorAll('.chat-message:not(.removing)');
     if (msgs.length === 0) return;
     const oldest = msgs[0];
     oldest.classList.add('removing');
@@ -292,9 +363,10 @@
 
     if (wasNearBottom) scrollToBottom();
 
-    // Enforce maxMessages
-    const allMsgs = container.querySelectorAll('.chat-message');
-    if (allMsgs.length > cfg.maxMessages) {
+    // Enforce maxMessages — only count visible messages, remove all excess at once
+    const allMsgs = container.querySelectorAll('.chat-message:not(.removing)');
+    const excess = allMsgs.length - cfg.maxMessages;
+    for (let i = 0; i < excess; i++) {
       removeOldestMessage();
     }
 
@@ -393,11 +465,16 @@
     applyConfigToCSS();
     applyPosition();
 
+    // Expose API for settings panel
+    window.overlayAPI = { applyConfigToCSS, connect };
+
     if (!cfg.channel || cfg.channel.trim() === '') {
       showStatus('⚠ Open config.js and set your channel name', 'warning');
       return;
     }
 
+    // Fetch badge images from Helix API (non-blocking — runs alongside IRC connect)
+    fetchBadges(cfg.channel.trim().toLowerCase());
     connect();
   });
 })();
