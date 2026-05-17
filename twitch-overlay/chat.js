@@ -69,6 +69,7 @@
     root.style.setProperty('--badge-size',         cfg.badgeSize);
     root.style.setProperty('--animation-duration', cfg.animationDuration);
     root.style.setProperty('--max-width',          cfg.maxWidth);
+    root.style.setProperty('--chat-height',        cfg.chatHeight || '600px');
     root.style.setProperty('--text-shadow',        cfg.textShadow
       ? '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.6)'
       : 'none');

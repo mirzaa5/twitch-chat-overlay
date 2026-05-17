@@ -138,6 +138,7 @@
       { id: 'sp-maxMessages', min: 1,   max: 20  },
       { id: 'sp-fontSize',    min: 11,  max: 26  },
       { id: 'sp-maxWidth',    min: 220, max: 480 },
+      { id: 'sp-chatHeight',  min: 200, max: 900 },
       { id: 'sp-badgeSize',   min: 14,  max: 24  },
       { id: 'sp-animDuration',min: 0.1, max: 1.0 },
       { id: 'sp-fadeAfter',   min: 0,   max: 60  },
@@ -175,6 +176,7 @@
     cfg.maxMessages       = clamp(parseInt(get('sp-maxMessages').value) || 10, 1, 20);
     cfg.fontSize          = clamp(parseFloat(get('sp-fontSize').value)  || 14, 11, 26)  + 'px';
     cfg.maxWidth          = clamp(parseFloat(get('sp-maxWidth').value)   || 340, 220, 480) + 'px';
+    cfg.chatHeight        = clamp(parseFloat(get('sp-chatHeight').value) || 600, 200, 900) + 'px';
     cfg.badgeSize         = clamp(parseFloat(get('sp-badgeSize').value)  || 18, 14, 24)  + 'px';
     cfg.animationDuration = clamp(parseFloat(get('sp-animDuration').value) || 0.3, 0.1, 1.0).toFixed(2) + 's';
     cfg.fadeMessageAfter  = clamp(parseFloat(get('sp-fadeAfter').value)  || 0,   0,  60);
@@ -228,6 +230,7 @@
     set('sp-maxMessages',      cfg.maxMessages);
     set('sp-fontSize',         stripUnit(cfg.fontSize));
     set('sp-maxWidth',         stripUnit(cfg.maxWidth));
+    set('sp-chatHeight',       stripUnit(cfg.chatHeight || '600px'));
     set('sp-badgeSize',        stripUnit(cfg.badgeSize));
     set('sp-animDuration',     stripUnit(cfg.animationDuration));
     set('sp-fadeAfter',        cfg.fadeMessageAfter);
@@ -308,7 +311,7 @@
       animationDuration: cfg.animationDuration, showBadges: cfg.showBadges,
       showTimestamps: cfg.showTimestamps, highlightMentions: cfg.highlightMentions,
       mentionColor: cfg.mentionColor, fadeMessageAfter: cfg.fadeMessageAfter,
-      textShadow: cfg.textShadow, maxWidth: cfg.maxWidth, position: cfg.position,
+      textShadow: cfg.textShadow, maxWidth: cfg.maxWidth, chatHeight: cfg.chatHeight, position: cfg.position,
       showAlerts: cfg.showAlerts,
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)); } catch (e) {}
@@ -375,6 +378,17 @@
               </div>
               <span class="sp-hint">220 – 480 px</span>
             </div>
+            <div class="sp-field sp-field-half">
+              <label class="sp-label" for="sp-chatHeight">Chat height</label>
+              <div class="sp-input-unit">
+                <input class="sp-input" type="number" id="sp-chatHeight"
+                  value="${stripUnit(cfg.chatHeight || '600px')}" min="200" max="900">
+                <span class="sp-unit">px</span>
+              </div>
+              <span class="sp-hint">200 – 900 px</span>
+            </div>
+          </div>
+          <div class="sp-row">
             <div class="sp-field sp-field-half">
               <label class="sp-label" for="sp-badgeSize">Badge size</label>
               <div class="sp-input-unit">

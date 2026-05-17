@@ -48,6 +48,9 @@ window.OVERLAY_CONFIG = {
   // Maximum width of the chat container
   maxWidth: "340px",
 
+  // Maximum height of the chat container
+  chatHeight: "600px",
+
   // Position of the overlay — accepts: bottom-left, bottom-right, top-left, top-right
   position: "bottom-left",
 };
